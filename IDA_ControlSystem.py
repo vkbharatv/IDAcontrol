@@ -173,8 +173,6 @@ class PIDController:
         den = process.plant.den[0][0]
         polset = -np.real(ctrl.poles(process.plant))
 
-
-        print(len(den))
         if len(den) == 2:
             K = num[0] / den[1]
             tau = den[0] / den[1]
@@ -190,20 +188,19 @@ class PIDController:
             print(f"Order: {order} K: {K} a: {a} b: {b}")
             # raise ValueError("IIMC tuning is only implemented for first and second order systems.")
         theta = theta
-        psi = l * (min(polset)+0.5/theta)-(0.5/theta)
-        print(f"Process Gain K: {K}, a: {a}, b: {b}, psi: {psi}")
+        self.psi = l * (min(polset) + 1 / (theta / 4)) - (1 / theta / 4)
 
         if order == 1:
-            tau_hat = tau/(1-tau*psi)
-            K_hat = K*np.exp(psi*theta)/(1 - tau*psi)
+            tau_hat = tau / (1 - tau * self.psi)
+            K_hat = K * np.exp(self.psi * theta) / (1 - tau * self.psi)
             kc = (tau_hat+0.5*theta)/(theta*K_hat)
             ti = tau_hat + 0.5*theta
             td = (0.5*tau_hat*theta)/(tau_hat+0.5*theta)
 
         elif order == 2:
-            K_hat = K*np.exp(psi*theta)/(1 - b*psi+ a*psi**2)
-            a_hat = a/(1 - b*psi + a*psi**2)
-            b_hat = (b - 2*a*psi)/(1 - b*psi + a*psi**2)
+            K_hat = K * np.exp(self.psi * theta) / (1 - b * self.psi + a * self.psi**2)
+            a_hat = a / (1 - b * self.psi + a * self.psi**2)
+            b_hat = (b - 2 * a * self.psi) / (1 - b * self.psi + a * self.psi**2)
             kc= b_hat/(K_hat*theta) 
             ti= b_hat
             td= (a_hat)/(b_hat)
@@ -215,33 +212,3 @@ class PIDController:
         Kd = kc*td
         self.update_gains(Kp, Ki, Kd)
         return Kp, Ki, Kd
-
-if __name__ == "__main__":
-    # Example usage
-    plant_tf = ctrl.tf([10], [1, 2, 1])  # Example transfer function
-    delay_time = 0.5  # 0.5 seconds delay
-    process = ProcessDefinition(plant_tf, delay_time)
-
-    pid = PIDController(Kp=2.0, Ki=1.0, Kd=1)
-    pid.IIMC_tuning(process, theta=delay_time, psi=0.2)
-    setpoint = 1.0
-    sim_time = 10.0
-    dt = 0.01
-    time_steps = int(sim_time / dt)
-
-    for _ in range(time_steps):
-        current_output = process.y[-1][0]
-        pid.update_gains(3.0, 1.0, 0.5)  # Update PID gains if needed
-        control_signal = pid.compute(setpoint, current_output)
-        process.step(control_signal)
-
-    # Plot results
-    plt.figure()
-    plt.plot(process.t, [y[0] for y in process.y], label="Process Output")
-    plt.plot(process.t, [setpoint] * len(process.t), "r--", label="Setpoint")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Output")
-    plt.title("Process Output with PID Control")
-    plt.legend()
-    plt.grid()
-    plt.show()
