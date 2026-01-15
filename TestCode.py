@@ -8,7 +8,7 @@ plt.rcParams["font.size"] = 10
 plt.rcParams["font.serif"] = ["Times New Roman", "Times New Roman"]
 
 s = ctrl.TransferFunction.s
-G = 1 / (s**2 + 1 * s + 1)
+G = 1 / ((s + 1) * (0.7 * s + 1))
 theta = 2
 setpoint = 1.0
 sim_time = 100.0
@@ -20,7 +20,7 @@ spf = ProcessDefinition((1 / (1 + s)), 0, dt=dt)
 pid = PIDController(Kp=2.0, Ki=0.0, Kd=0.0, dt=dt)
 fig, ax = plt.figure(), plt.gca()
 y_T = []
-l = np.linspace(0.04, 0.3, 5)
+l = np.linspace(0.05, 0.09, 10)  # Different values of psi between 0 to 1
 psi = []
 for l_i in l:
     pid.IIMC_tuning(process, theta=theta, l=l_i)
